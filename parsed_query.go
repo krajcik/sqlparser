@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,11 +17,13 @@ limitations under the License.
 package sqlparser
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
+	"strings"
 
-	"github.com/xwb1989/sqlparser/dependency/querypb"
-	"github.com/xwb1989/sqlparser/dependency/sqltypes"
+	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+
+	"github.com/sandeepone/sqlparser/dependency/querypb"
 )
 
 // ParsedQuery represents a parsed query where
@@ -45,11 +47,20 @@ func NewParsedQuery(node SQLNode) *ParsedQuery {
 // GenerateQuery generates a query by substituting the specified
 // bindVariables. The extras parameter specifies special parameters
 // that can perform custom encoding.
-func (pq *ParsedQuery) GenerateQuery(bindVariables map[string]*querypb.BindVariable, extras map[string]Encodable) ([]byte, error) {
+func (pq *ParsedQuery) GenerateQuery(bindVariables map[string]*querypb.BindVariable, extras map[string]Encodable) (string, error) {
 	if len(pq.bindLocations) == 0 {
-		return []byte(pq.Query), nil
+		return pq.Query, nil
 	}
-	buf := bytes.NewBuffer(make([]byte, 0, len(pq.Query)))
+	var buf strings.Builder
+	buf.Grow(len(pq.Query))
+	if err := pq.Append(&buf, bindVariables, extras); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// Append appends the generated query to the provided buffer.
+func (pq *ParsedQuery) Append(buf *strings.Builder, bindVariables map[string]*querypb.BindVariable, extras map[string]Encodable) error {
 	current := 0
 	for _, loc := range pq.bindLocations {
 		buf.WriteString(pq.Query[current:loc.offset])
@@ -59,18 +70,24 @@ func (pq *ParsedQuery) GenerateQuery(bindVariables map[string]*querypb.BindVaria
 		} else {
 			supplied, _, err := FetchBindVar(name, bindVariables)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			EncodeValue(buf, supplied)
 		}
 		current = loc.offset + loc.length
 	}
 	buf.WriteString(pq.Query[current:])
-	return buf.Bytes(), nil
+	return nil
+}
+
+// MarshalJSON is a custom JSON marshaler for ParsedQuery.
+// Note that any queries longer that 512 bytes will be truncated.
+func (pq *ParsedQuery) MarshalJSON() ([]byte, error) {
+	return json.Marshal(TruncateForUI(pq.Query))
 }
 
 // EncodeValue encodes one bind variable value into the query.
-func EncodeValue(buf *bytes.Buffer, value *querypb.BindVariable) {
+func EncodeValue(buf *strings.Builder, value *querypb.BindVariable) {
 	if value.Type != querypb.Type_TUPLE {
 		// Since we already check for TUPLE, we don't expect an error.
 		v, _ := sqltypes.BindVariableToValue(value)

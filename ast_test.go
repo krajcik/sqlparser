@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/xwb1989/sqlparser/dependency/sqltypes"
+	"github.com/sandeepone/sqlparser/dependency/sqltypes"
 )
 
 func TestAppend(t *testing.T) {
@@ -33,7 +33,7 @@ func TestAppend(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	var b bytes.Buffer
+	var b strings.Builder
 	Append(&b, tree)
 	got := b.String()
 	want := query
@@ -191,6 +191,195 @@ func TestSetLimit(t *testing.T) {
 	}
 }
 
+func TestDDL(t *testing.T) {
+	testcases := []struct {
+		query    string
+		output   *DDL
+		affected []string
+	}{{
+		query: "create table a",
+		output: &DDL{
+			Action: CreateStr,
+			Table:  TableName{Name: NewTableIdent("a")},
+		},
+		affected: []string{"a"},
+	}, {
+		query: "rename table a to b",
+		output: &DDL{
+			Action: RenameStr,
+			FromTables: TableNames{
+				TableName{Name: NewTableIdent("a")},
+			},
+			ToTables: TableNames{
+				TableName{Name: NewTableIdent("b")},
+			},
+		},
+		affected: []string{"a", "b"},
+	}, {
+		query: "rename table a to b, c to d",
+		output: &DDL{
+			Action: RenameStr,
+			FromTables: TableNames{
+				TableName{Name: NewTableIdent("a")},
+				TableName{Name: NewTableIdent("c")},
+			},
+			ToTables: TableNames{
+				TableName{Name: NewTableIdent("b")},
+				TableName{Name: NewTableIdent("d")},
+			},
+		},
+		affected: []string{"a", "c", "b", "d"},
+	}, {
+		query: "drop table a",
+		output: &DDL{
+			Action: DropStr,
+			FromTables: TableNames{
+				TableName{Name: NewTableIdent("a")},
+			},
+		},
+		affected: []string{"a"},
+	}, {
+		query: "drop table a, b",
+		output: &DDL{
+			Action: DropStr,
+			FromTables: TableNames{
+				TableName{Name: NewTableIdent("a")},
+				TableName{Name: NewTableIdent("b")},
+			},
+		},
+		affected: []string{"a", "b"},
+	}}
+	for _, tcase := range testcases {
+		got, err := Parse(tcase.query)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, tcase.output) {
+			t.Errorf("%s: %v, want %v", tcase.query, got, tcase.output)
+		}
+		want := make(TableNames, 0, len(tcase.affected))
+		for _, t := range tcase.affected {
+			want = append(want, TableName{Name: NewTableIdent(t)})
+		}
+		if affected := got.(*DDL).AffectedTables(); !reflect.DeepEqual(affected, want) {
+			t.Errorf("Affected(%s): %v, want %v", tcase.query, affected, want)
+		}
+	}
+}
+
+func TestSetAutocommitON(t *testing.T) {
+	stmt, err := Parse("SET autocommit=ON")
+	if err != nil {
+		t.Error(err)
+	}
+	s, ok := stmt.(*Set)
+	if !ok {
+		t.Errorf("SET statement is not Set: %T", s)
+	}
+
+	if len(s.Exprs) < 1 {
+		t.Errorf("SET statement has no expressions")
+	}
+
+	e := s.Exprs[0]
+	switch v := e.Expr.(type) {
+	case *SQLVal:
+		if v.Type != StrVal {
+			t.Errorf("SET statement value is not StrVal: %T", v)
+		}
+
+		if !bytes.Equal([]byte("on"), v.Val) {
+			t.Errorf("SET statement value want: on, got: %s", v.Val)
+		}
+	default:
+		t.Errorf("SET statement expression is not SQLVal: %T", e.Expr)
+	}
+
+	stmt, err = Parse("SET @@session.autocommit=ON")
+	if err != nil {
+		t.Error(err)
+	}
+	s, ok = stmt.(*Set)
+	if !ok {
+		t.Errorf("SET statement is not Set: %T", s)
+	}
+
+	if len(s.Exprs) < 1 {
+		t.Errorf("SET statement has no expressions")
+	}
+
+	e = s.Exprs[0]
+	switch v := e.Expr.(type) {
+	case *SQLVal:
+		if v.Type != StrVal {
+			t.Errorf("SET statement value is not StrVal: %T", v)
+		}
+
+		if !bytes.Equal([]byte("on"), v.Val) {
+			t.Errorf("SET statement value want: on, got: %s", v.Val)
+		}
+	default:
+		t.Errorf("SET statement expression is not SQLVal: %T", e.Expr)
+	}
+}
+
+func TestSetAutocommitOFF(t *testing.T) {
+	stmt, err := Parse("SET autocommit=OFF")
+	if err != nil {
+		t.Error(err)
+	}
+	s, ok := stmt.(*Set)
+	if !ok {
+		t.Errorf("SET statement is not Set: %T", s)
+	}
+
+	if len(s.Exprs) < 1 {
+		t.Errorf("SET statement has no expressions")
+	}
+
+	e := s.Exprs[0]
+	switch v := e.Expr.(type) {
+	case *SQLVal:
+		if v.Type != StrVal {
+			t.Errorf("SET statement value is not StrVal: %T", v)
+		}
+
+		if !bytes.Equal([]byte("off"), v.Val) {
+			t.Errorf("SET statement value want: on, got: %s", v.Val)
+		}
+	default:
+		t.Errorf("SET statement expression is not SQLVal: %T", e.Expr)
+	}
+
+	stmt, err = Parse("SET @@session.autocommit=OFF")
+	if err != nil {
+		t.Error(err)
+	}
+	s, ok = stmt.(*Set)
+	if !ok {
+		t.Errorf("SET statement is not Set: %T", s)
+	}
+
+	if len(s.Exprs) < 1 {
+		t.Errorf("SET statement has no expressions")
+	}
+
+	e = s.Exprs[0]
+	switch v := e.Expr.(type) {
+	case *SQLVal:
+		if v.Type != StrVal {
+			t.Errorf("SET statement value is not StrVal: %T", v)
+		}
+
+		if !bytes.Equal([]byte("off"), v.Val) {
+			t.Errorf("SET statement value want: on, got: %s", v.Val)
+		}
+	default:
+		t.Errorf("SET statement expression is not SQLVal: %T", e.Expr)
+	}
+
+}
+
 func TestWhere(t *testing.T) {
 	var w *Where
 	buf := NewTrackedBuffer(nil)
@@ -220,6 +409,35 @@ func TestIsAggregate(t *testing.T) {
 	f = FuncExpr{Name: NewColIdent("foo")}
 	if f.IsAggregate() {
 		t.Error("IsAggregate: true, want false")
+	}
+}
+
+func TestIsImpossible(t *testing.T) {
+	f := ComparisonExpr{
+		Operator: NotEqualStr,
+		Left:     newIntVal("1"),
+		Right:    newIntVal("1"),
+	}
+	if !f.IsImpossible() {
+		t.Error("IsImpossible: false, want true")
+	}
+
+	f = ComparisonExpr{
+		Operator: EqualStr,
+		Left:     newIntVal("1"),
+		Right:    newIntVal("1"),
+	}
+	if f.IsImpossible() {
+		t.Error("IsImpossible: true, want false")
+	}
+
+	f = ComparisonExpr{
+		Operator: NotEqualStr,
+		Left:     newIntVal("1"),
+		Right:    newIntVal("2"),
+	}
+	if f.IsImpossible() {
+		t.Error("IsImpossible: true, want false")
 	}
 }
 

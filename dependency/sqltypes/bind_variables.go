@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,12 +17,14 @@ limitations under the License.
 package sqltypes
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"reflect"
 	"strconv"
 
-	"github.com/xwb1989/sqlparser/dependency/querypb"
+	"github.com/golang/protobuf/proto"
+
+	"github.com/sandeepone/sqlparser/dependency/querypb"
 )
 
 // NullBindVariable is a bindvar with NULL value.
@@ -53,6 +55,11 @@ func BuildBindVariables(in map[string]interface{}) (map[string]*querypb.BindVari
 		out[k] = bv
 	}
 	return out, nil
+}
+
+// Int8BindVariable converts an int8 to a bind var.
+func Int8BindVariable(v int8) *querypb.BindVariable {
+	return ValueBindVariable(NewInt8(v))
 }
 
 // Int32BindVariable converts an int32 to a bind var.
@@ -97,6 +104,11 @@ func BuildBindVariable(v interface{}) (*querypb.BindVariable, error) {
 		return StringBindVariable(v), nil
 	case []byte:
 		return BytesBindVariable(v), nil
+	case bool:
+		if v {
+			return Int8BindVariable(1), nil
+		}
+		return Int8BindVariable(0), nil
 	case int:
 		return &querypb.BindVariable{
 			Type:  querypb.Type_INT64,
@@ -252,6 +264,7 @@ func BindVariableToValue(bv *querypb.BindVariable) (Value, error) {
 }
 
 // BindVariablesEqual compares two maps of bind variables.
+// For protobuf messages we have to use "reflect.DeepEqual".
 func BindVariablesEqual(x, y map[string]*querypb.BindVariable) bool {
 	return reflect.DeepEqual(&querypb.BoundQuery{BindVariables: x}, &querypb.BoundQuery{BindVariables: y})
 }
@@ -263,4 +276,54 @@ func CopyBindVariables(bindVariables map[string]*querypb.BindVariable) map[strin
 		result[key] = value
 	}
 	return result
+}
+
+// FormatBindVariables returns a string representation of the
+// bind variables.
+//
+// If full is false, then large string or tuple values are truncated
+// to only print the lengths.
+//
+// If asJson is true, then the resulting string is a valid JSON
+// representation, otherwise it is the golang printed map representation.
+func FormatBindVariables(bindVariables map[string]*querypb.BindVariable, full, asJSON bool) string {
+	var out map[string]*querypb.BindVariable
+	if full {
+		out = bindVariables
+	} else {
+		// NOTE(szopa): I am getting rid of potentially large bind
+		// variables.
+		out = make(map[string]*querypb.BindVariable)
+		for k, v := range bindVariables {
+			if IsIntegral(v.Type) || IsFloat(v.Type) {
+				out[k] = v
+			} else if v.Type == querypb.Type_TUPLE {
+				out[k] = StringBindVariable(fmt.Sprintf("%v items", len(v.Values)))
+			} else {
+				out[k] = StringBindVariable(fmt.Sprintf("%v bytes", len(v.Value)))
+			}
+		}
+	}
+
+	if asJSON {
+		var buf bytes.Buffer
+		buf.WriteString("{")
+		first := true
+		for k, v := range out {
+			if !first {
+				buf.WriteString(", ")
+			} else {
+				first = false
+			}
+			if IsIntegral(v.Type) || IsFloat(v.Type) {
+				fmt.Fprintf(&buf, "%q: {\"type\": %q, \"value\": %v}", k, v.Type, string(v.Value))
+			} else {
+				fmt.Fprintf(&buf, "%q: {\"type\": %q, \"value\": %q}", k, v.Type, string(v.Value))
+			}
+		}
+		buf.WriteString("}")
+		return buf.String()
+	}
+
+	return fmt.Sprintf("%v", out)
 }

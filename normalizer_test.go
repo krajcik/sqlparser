@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/xwb1989/sqlparser/dependency/querypb"
-	"github.com/xwb1989/sqlparser/dependency/sqltypes"
+	"github.com/sandeepone/sqlparser/dependency/querypb"
+	"github.com/sandeepone/sqlparser/dependency/sqltypes"
 )
 
 func TestNormalize(t *testing.T) {
@@ -118,6 +118,26 @@ func TestNormalize(t *testing.T) {
 		outstmt: "update a set v1 = 0x1234",
 		outbv:   map[string]*querypb.BindVariable{},
 	}, {
+		// Bin value does not convert
+		in:      "select * from t where v1 = b'11'",
+		outstmt: "select * from t where v1 = B'11'",
+		outbv:   map[string]*querypb.BindVariable{},
+	}, {
+		// Bin value does not convert for DMLs
+		in:      "update a set v1 = b'11'",
+		outstmt: "update a set v1 = B'11'",
+		outbv:   map[string]*querypb.BindVariable{},
+	}, {
+		// ORDER BY column_position
+		in:      "select a, b from t order by 1 asc",
+		outstmt: "select a, b from t order by 1 asc",
+		outbv:   map[string]*querypb.BindVariable{},
+	}, {
+		// ORDER BY variable
+		in:      "select a, b from t order by c asc",
+		outstmt: "select a, b from t order by c asc",
+		outbv:   map[string]*querypb.BindVariable{},
+	}, {
 		// Values up to len 256 will reuse.
 		in:      fmt.Sprintf("select * from t where v1 = '%256s' and v2 = '%256s'", "a", "a"),
 		outstmt: "select * from t where v1 = :bv1 and v2 = :bv1",
@@ -202,5 +222,22 @@ func TestGetBindVars(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("GetBindVars: %v, want: %v", got, want)
+	}
+}
+
+/*
+Skipping ColName, TableName:
+BenchmarkNormalize-8     1000000              2205 ns/op             821 B/op         27 allocs/op
+Prior to skip:
+BenchmarkNormalize-8      500000              3620 ns/op            1461 B/op         55 allocs/op
+*/
+func BenchmarkNormalize(b *testing.B) {
+	sql := "select 'abcd', 20, 30.0, eid from a where 1=eid and name='3'"
+	ast, err := Parse(sql)
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < b.N; i++ {
+		Normalize(ast, map[string]*querypb.BindVariable{}, "")
 	}
 }

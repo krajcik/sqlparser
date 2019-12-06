@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@ limitations under the License.
 package sqltypes
 
 import (
-	querypb "github.com/xwb1989/sqlparser/dependency/querypb"
+	"bytes"
+	"fmt"
+	"strings"
+
+	"github.com/sandeepone/sqlparser/dependency/querypb"
 )
 
 // Functions in this file should only be used for testing.
 // This is an experiment to see if test code bloat can be
 // reduced and readability improved.
 
-/*
 // MakeTestFields builds a []*querypb.Field for testing.
 //   fields := sqltypes.MakeTestFields(
 //     "a|b",
@@ -107,7 +110,6 @@ func MakeTestStreamingResults(fields []*querypb.Field, rows ...string) []*Result
 	}
 	return results
 }
-*/
 
 // TestBindVariable makes a *querypb.BindVariable from
 // an interface{}.It panics on invalid input.
@@ -129,7 +131,6 @@ func TestValue(typ querypb.Type, val string) Value {
 	return MakeTrusted(typ, []byte(val))
 }
 
-/*
 // PrintResults prints []*Results into a string.
 // This function should only be used for testing.
 func PrintResults(results []*Result) string {
@@ -151,4 +152,3 @@ func split(str string) []string {
 	}
 	return splits
 }
-*/

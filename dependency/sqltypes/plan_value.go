@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,10 +18,8 @@ package sqltypes
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 
-	"github.com/xwb1989/sqlparser/dependency/querypb"
+	querypb "github.com/sandeepone/sqlparser/dependency/querypb"
 )
 
 // PlanValue represents a value or a list of values for
@@ -221,7 +219,7 @@ func ResolveRows(pvs []PlanValue, bindVars map[string]*querypb.BindVariable) ([]
 		rows[i] = make([]Value, len(pvs))
 	}
 
-	// Using j becasue we're resolving by columns.
+	// Using j because we're resolving by columns.
 	for j, pv := range pvs {
 		switch {
 		case pv.Key != "":

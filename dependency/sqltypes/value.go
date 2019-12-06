@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/xwb1989/sqlparser/dependency/bytes2"
-	"github.com/xwb1989/sqlparser/dependency/hack"
+	"github.com/sandeepone/sqlparser/dependency/bytes2"
+	"github.com/sandeepone/sqlparser/dependency/hack"
 
-	"github.com/xwb1989/sqlparser/dependency/querypb"
+	"github.com/sandeepone/sqlparser/dependency/querypb"
 )
 
 var (
@@ -48,7 +48,7 @@ type BinWriter interface {
 }
 
 // Value can store any SQL value. If the value represents
-// an integral type, the bytes are always stored as a cannonical
+// an integral type, the bytes are always stored as a canonical
 // representation that matches how MySQL returns such values.
 type Value struct {
 	typ querypb.Type
@@ -74,7 +74,7 @@ func NewValue(typ querypb.Type, val []byte) (v Value, err error) {
 			return NULL, err
 		}
 		return MakeTrusted(typ, val), nil
-	case IsQuoted(typ) || typ == Null:
+	case IsQuoted(typ) || typ == Bit || typ == Null:
 		return MakeTrusted(typ, val), nil
 	}
 	// All other types are unsafe or invalid.
@@ -89,15 +89,22 @@ func NewValue(typ querypb.Type, val []byte) (v Value, err error) {
 // comments. Other packages can also use the function to create
 // VarBinary or VarChar values.
 func MakeTrusted(typ querypb.Type, val []byte) Value {
+
 	if typ == Null {
 		return NULL
 	}
+
 	return Value{typ: typ, val: val}
 }
 
 // NewInt64 builds an Int64 Value.
 func NewInt64(v int64) Value {
 	return MakeTrusted(Int64, strconv.AppendInt(nil, v, 10))
+}
+
+// NewInt8 builds an Int8 Value.
+func NewInt8(v int8) Value {
+	return MakeTrusted(Int8, strconv.AppendInt(nil, int64(v), 10))
 }
 
 // NewInt32 builds an Int64 Value.
@@ -108,6 +115,11 @@ func NewInt32(v int32) Value {
 // NewUint64 builds an Uint64 Value.
 func NewUint64(v uint64) Value {
 	return MakeTrusted(Uint64, strconv.AppendUint(nil, v, 10))
+}
+
+// NewUint32 builds an Uint32 Value.
+func NewUint32(v uint32) Value {
+	return MakeTrusted(Uint32, strconv.AppendUint(nil, uint64(v), 10))
 }
 
 // NewFloat64 builds an Float64 Value.
@@ -126,7 +138,7 @@ func NewVarBinary(v string) Value {
 	return MakeTrusted(VarBinary, []byte(v))
 }
 
-// NewIntegral builds an integral type from a string representaion.
+// NewIntegral builds an integral type from a string representation.
 // The type will be Int64 or Uint64. Int64 will be preferred where possible.
 func NewIntegral(val string) (n Value, err error) {
 	signed, err := strconv.ParseInt(val, 0, 64)
@@ -169,7 +181,7 @@ func (v Value) Type() querypb.Type {
 	return v.typ
 }
 
-// Raw returns the internal represenation of the value. For newer types,
+// Raw returns the internal representation of the value. For newer types,
 // this may not match MySQL's representation.
 func (v Value) Raw() []byte {
 	return v.val
@@ -205,7 +217,7 @@ func (v Value) String() string {
 	if v.typ == Null {
 		return "NULL"
 	}
-	if v.IsQuoted() {
+	if v.IsQuoted() || v.typ == Bit {
 		return fmt.Sprintf("%v(%q)", v.typ, v.val)
 	}
 	return fmt.Sprintf("%v(%s)", v.typ, v.val)
@@ -218,6 +230,8 @@ func (v Value) EncodeSQL(b BinWriter) {
 		b.Write(nullstr)
 	case v.IsQuoted():
 		encodeBytesSQL(v.val, b)
+	case v.typ == Bit:
+		encodeBytesSQLBits(v.val, b)
 	default:
 		b.Write(v.val)
 	}
@@ -228,7 +242,7 @@ func (v Value) EncodeASCII(b BinWriter) {
 	switch {
 	case v.typ == Null:
 		b.Write(nullstr)
-	case v.IsQuoted():
+	case v.IsQuoted() || v.typ == Bit:
 		encodeBytesASCII(v.val, b)
 	default:
 		b.Write(v.val)
@@ -279,7 +293,7 @@ func (v Value) IsBinary() bool {
 // It's not a complete implementation.
 func (v Value) MarshalJSON() ([]byte, error) {
 	switch {
-	case v.IsQuoted():
+	case v.IsQuoted() || v.typ == Bit:
 		return json.Marshal(v.ToString())
 	case v.typ == Null:
 		return nullstr, nil
@@ -331,6 +345,14 @@ func encodeBytesSQL(val []byte, b BinWriter) {
 	}
 	buf.WriteByte('\'')
 	b.Write(buf.Bytes())
+}
+
+func encodeBytesSQLBits(val []byte, b BinWriter) {
+	fmt.Fprint(b, "b'")
+	for _, ch := range val {
+		fmt.Fprintf(b, "%08b", ch)
+	}
+	fmt.Fprint(b, "'")
 }
 
 func encodeBytesASCII(val []byte, b BinWriter) {

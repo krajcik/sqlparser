@@ -1,5 +1,5 @@
 /*
-Copyright 2017 Google Inc.
+Copyright 2019 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,18 +19,21 @@ package sqlparser
 // analyzer.go contains utility analysis functions.
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"unicode"
 
-	"github.com/xwb1989/sqlparser/dependency/sqltypes"
+	"github.com/sandeepone/sqlparser/dependency/sqltypes"
 )
 
+// StatementType encodes the type of a SQL statement
+type StatementType int
+
 // These constants are used to identify the SQL statement type.
+// Changing this list will require reviewing all calls to Preview.
 const (
-	StmtSelect = iota
+	StmtSelect StatementType = iota
 	StmtStream
 	StmtInsert
 	StmtReplace
@@ -50,14 +53,19 @@ const (
 
 // Preview analyzes the beginning of the query using a simpler and faster
 // textual comparison to identify the statement type.
-func Preview(sql string) int {
+func Preview(sql string) StatementType {
 	trimmed := StripLeadingComments(sql)
 
-	firstWord := trimmed
-	if end := strings.IndexFunc(trimmed, unicode.IsSpace); end != -1 {
-		firstWord = trimmed[:end]
+	if strings.Index(trimmed, "/*!") == 0 {
+		return StmtComment
 	}
-	firstWord = strings.TrimLeftFunc(firstWord, func(r rune) bool { return !unicode.IsLetter(r) })
+
+	isNotLetter := func(r rune) bool { return !unicode.IsLetter(r) }
+	firstWord := strings.TrimLeftFunc(trimmed, isNotLetter)
+
+	if end := strings.IndexFunc(firstWord, unicode.IsSpace); end != -1 {
+		firstWord = firstWord[:end]
+	}
 	// Comparison is done in order of priority.
 	loweredFirstWord := strings.ToLower(firstWord)
 	switch loweredFirstWord {
@@ -89,7 +97,7 @@ func Preview(sql string) int {
 		return StmtRollback
 	}
 	switch loweredFirstWord {
-	case "create", "alter", "rename", "drop", "truncate":
+	case "create", "alter", "rename", "drop", "truncate", "flush":
 		return StmtDDL
 	case "set":
 		return StmtSet
@@ -100,15 +108,11 @@ func Preview(sql string) int {
 	case "analyze", "describe", "desc", "explain", "repair", "optimize":
 		return StmtOther
 	}
-	if strings.Index(trimmed, "/*!") == 0 {
-		return StmtComment
-	}
 	return StmtUnknown
 }
 
-// StmtType returns the statement type as a string
-func StmtType(stmtType int) string {
-	switch stmtType {
+func (s StatementType) String() string {
+	switch s {
 	case StmtSelect:
 		return "SELECT"
 	case StmtStream:
@@ -149,6 +153,23 @@ func IsDML(sql string) bool {
 		return true
 	}
 	return false
+}
+
+// SplitAndExpression breaks up the Expr into AND-separated conditions
+// and appends them to filters. Outer parenthesis are removed. Precedence
+// should be taken into account if expressions are recombined.
+func SplitAndExpression(filters []Expr, node Expr) []Expr {
+	if node == nil {
+		return filters
+	}
+	switch node := node.(type) {
+	case *AndExpr:
+		filters = SplitAndExpression(filters, node.Left)
+		return SplitAndExpression(filters, node.Right)
+	case *ParenExpr:
+		return SplitAndExpression(filters, node.Expr)
+	}
+	return append(filters, node)
 }
 
 // GetTableName returns the table name from the SimpleTableExpr
@@ -217,7 +238,7 @@ func NewPlanValue(node Expr) (sqltypes.PlanValue, error) {
 		case IntVal:
 			n, err := sqltypes.NewIntegral(string(node.Val))
 			if err != nil {
-				return sqltypes.PlanValue{}, fmt.Errorf("%v", err)
+				return sqltypes.PlanValue{}, err
 			}
 			return sqltypes.PlanValue{Value: n}, nil
 		case StrVal:
@@ -225,7 +246,7 @@ func NewPlanValue(node Expr) (sqltypes.PlanValue, error) {
 		case HexVal:
 			v, err := node.HexDecode()
 			if err != nil {
-				return sqltypes.PlanValue{}, fmt.Errorf("%v", err)
+				return sqltypes.PlanValue{}, err
 			}
 			return sqltypes.PlanValue{Value: sqltypes.MakeTrusted(sqltypes.VarBinary, v)}, nil
 		}
@@ -252,17 +273,6 @@ func NewPlanValue(node Expr) (sqltypes.PlanValue, error) {
 	return sqltypes.PlanValue{}, fmt.Errorf("expression is too complex '%v'", String(node))
 }
 
-// StringIn is a convenience function that returns
-// true if str matches any of the values.
-func StringIn(str string, values ...string) bool {
-	for _, val := range values {
-		if str == val {
-			return true
-		}
-	}
-	return false
-}
-
 // SetKey is the extracted key from one SetExpr
 type SetKey struct {
 	Key   string
@@ -284,14 +294,18 @@ func ExtractSetValues(sql string) (keyValues map[SetKey]interface{}, scope strin
 	}
 	result := make(map[SetKey]interface{})
 	for _, expr := range setStmt.Exprs {
-		scope := SessionStr
+		scope := ImplicitStr
 		key := expr.Name.Lowered()
 		switch {
 		case strings.HasPrefix(key, "@@global."):
 			scope = GlobalStr
 			key = strings.TrimPrefix(key, "@@global.")
 		case strings.HasPrefix(key, "@@session."):
+			scope = SessionStr
 			key = strings.TrimPrefix(key, "@@session.")
+		case strings.HasPrefix(key, "@@vitess_metadata."):
+			scope = VitessMetadataStr
+			key = strings.TrimPrefix(key, "@@vitess_metadata.")
 		case strings.HasPrefix(key, "@@"):
 			key = strings.TrimPrefix(key, "@@")
 		}
