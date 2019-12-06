@@ -1,10 +1,9 @@
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: arithmetic.go
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: arithmetic_test.go
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/bind_variables.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/bind_variables.go	2018-06-04 08:05:24.000000000 -0700
-@@ -19,11 +19,10 @@
- import (
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: arithmetic.go
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: arithmetic_test.go
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/bind_variables.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/bind_variables.go
+@@ -20,11 +20,10 @@
+ 	"bytes"
  	"errors"
  	"fmt"
 +	"reflect"
@@ -13,24 +12,24 @@ diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables.go /Use
 -	"github.com/golang/protobuf/proto"
 -
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  // NullBindVariable is a bindvar with NULL value.
-@@ -253,9 +252,8 @@
+@@ -264,9 +263,9 @@
  }
  
  // BindVariablesEqual compares two maps of bind variables.
 -// For protobuf messages we have to use "proto.Equal".
++// For protobuf messages we have to use "reflect.DeepEqual".
  func BindVariablesEqual(x, y map[string]*querypb.BindVariable) bool {
 -	return proto.Equal(&querypb.BoundQuery{BindVariables: x}, &querypb.BoundQuery{BindVariables: y})
 +	return reflect.DeepEqual(&querypb.BoundQuery{BindVariables: x}, &querypb.BoundQuery{BindVariables: y})
  }
  
  // CopyBindVariables returns a shallow-copy of the given bindVariables map.
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables_test.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/bind_variables_test.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables_test.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/bind_variables_test.go	2018-06-04 08:05:24.000000000 -0700
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/bind_variables_test.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/bind_variables_test.go
 @@ -21,16 +21,14 @@
  	"strings"
  	"testing"
@@ -38,7 +37,7 @@ diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables_test.go
 -	"github.com/golang/protobuf/proto"
 -
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  func TestProtoConversions(t *testing.T) {
@@ -50,7 +49,7 @@ diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables_test.go
  		t.Errorf("ValueToProto: %v, want %v", got, want)
  	}
  	gotback := ProtoToValue(got)
-@@ -240,7 +238,7 @@
+@@ -252,7 +250,7 @@
  			t.Errorf("ToBindVar(%T(%v)) error: nil, want %s", tcase.in, tcase.in, tcase.err)
  			continue
  		}
@@ -59,20 +58,163 @@ diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/bind_variables_test.go
  			t.Errorf("ToBindVar(%T(%v)): %v, want %s", tcase.in, tcase.in, bv, tcase.out)
  		}
  	}
-@@ -523,7 +521,7 @@
- 	v, err = BindVariableToValue(&querypb.BindVariable{Type: querypb.Type_TUPLE})
- 	wantErr := "cannot convert a TUPLE bind var into a value"
- 	if err == nil || err.Error() != wantErr {
--		t.Errorf(" BindVarToValue(TUPLE): (%v, %v), want %s", v, err, wantErr)
-+		t.Errorf(" BindVarToValue(TUPLE): %v, want %s", err, wantErr)
+@@ -566,83 +564,83 @@
  	}
  }
  
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: event_token.go
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: event_token_test.go
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/plan_value.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/plan_value.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/plan_value.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/plan_value.go	2018-06-04 08:05:24.000000000 -0700
+-func TestBindVariablesFormat(t *testing.T) {
+-	tupleBindVar, err := BuildBindVariable([]int64{1, 2})
+-	if err != nil {
+-		t.Fatalf("failed to create a tuple bind var: %v", err)
+-	}
++// func TestBindVariablesFormat(t *testing.T) {
++// 	tupleBindVar, err := BuildBindVariable([]int64{1, 2})
++// 	if err != nil {
++// 		t.Fatalf("failed to create a tuple bind var: %v", err)
++// 	}
+ 
+-	bindVariables := map[string]*querypb.BindVariable{
+-		"key_1": StringBindVariable("val_1"),
+-		"key_2": Int64BindVariable(789),
+-		"key_3": BytesBindVariable([]byte("val_3")),
+-		"key_4": tupleBindVar,
+-	}
++// 	bindVariables := map[string]*querypb.BindVariable{
++// 		"key_1": StringBindVariable("val_1"),
++// 		"key_2": Int64BindVariable(789),
++// 		"key_3": BytesBindVariable([]byte("val_3")),
++// 		"key_4": tupleBindVar,
++// 	}
+ 
+-	formattedStr := FormatBindVariables(bindVariables, true /* full */, false /* asJSON */)
+-	if !strings.Contains(formattedStr, "key_1") ||
+-		!strings.Contains(formattedStr, "val_1") {
+-		t.Fatalf("bind variable 'key_1': 'val_1' is not formatted")
+-	}
+-	if !strings.Contains(formattedStr, "key_2") ||
+-		!strings.Contains(formattedStr, "789") {
+-		t.Fatalf("bind variable 'key_2': '789' is not formatted")
+-	}
+-	if !strings.Contains(formattedStr, "key_3") || !strings.Contains(formattedStr, "val_3") {
+-		t.Fatalf("bind variable 'key_3': 'val_3' is not formatted")
+-	}
+-	if !strings.Contains(formattedStr, "key_4") ||
+-		!strings.Contains(formattedStr, "values:<type:INT64 value:\"1\" > values:<type:INT64 value:\"2\" >") {
+-		t.Fatalf("bind variable 'key_4': (1, 2) is not formatted")
+-	}
++// 	formattedStr := FormatBindVariables(bindVariables, true /* full */, false /* asJSON */)
++// 	if !strings.Contains(formattedStr, "key_1") ||
++// 		!strings.Contains(formattedStr, "val_1") {
++// 		t.Fatalf("bind variable 'key_1': 'val_1' is not formatted")
++// 	}
++// 	if !strings.Contains(formattedStr, "key_2") ||
++// 		!strings.Contains(formattedStr, "789") {
++// 		t.Fatalf("bind variable 'key_2': '789' is not formatted")
++// 	}
++// 	if !strings.Contains(formattedStr, "key_3") || !strings.Contains(formattedStr, "val_3") {
++// 		t.Fatalf("bind variable 'key_3': 'val_3' is not formatted")
++// 	}
++// 	if !strings.Contains(formattedStr, "key_4") ||
++// 		!strings.Contains(formattedStr, "values:<type:INT64 value:\"1\" > values:<type:INT64 value:\"2\" >") {
++// 		t.Fatalf("bind variable 'key_4': (1, 2) is not formatted")
++// 	}
+ 
+-	formattedStr = FormatBindVariables(bindVariables, false /* full */, false /* asJSON */)
+-	if !strings.Contains(formattedStr, "key_1") {
+-		t.Fatalf("bind variable 'key_1' is not formatted")
+-	}
+-	if !strings.Contains(formattedStr, "key_2") ||
+-		!strings.Contains(formattedStr, "789") {
+-		t.Fatalf("bind variable 'key_2': '789' is not formatted")
+-	}
+-	if !strings.Contains(formattedStr, "key_3") || !strings.Contains(formattedStr, "5 bytes") {
+-		t.Fatalf("bind variable 'key_3' is not formatted")
+-	}
+-	if !strings.Contains(formattedStr, "key_4") || !strings.Contains(formattedStr, "2 items") {
+-		t.Fatalf("bind variable 'key_4' is not formatted")
+-	}
++// 	formattedStr = FormatBindVariables(bindVariables, false /* full */, false /* asJSON */)
++// 	if !strings.Contains(formattedStr, "key_1") {
++// 		t.Fatalf("bind variable 'key_1' is not formatted")
++// 	}
++// 	if !strings.Contains(formattedStr, "key_2") ||
++// 		!strings.Contains(formattedStr, "789") {
++// 		t.Fatalf("bind variable 'key_2': '789' is not formatted")
++// 	}
++// 	if !strings.Contains(formattedStr, "key_3") || !strings.Contains(formattedStr, "5 bytes") {
++// 		t.Fatalf("bind variable 'key_3' is not formatted")
++// 	}
++// 	if !strings.Contains(formattedStr, "key_4") || !strings.Contains(formattedStr, "2 items") {
++// 		t.Fatalf("bind variable 'key_4' is not formatted")
++// 	}
+ 
+-	formattedStr = FormatBindVariables(bindVariables, true /* full */, true /* asJSON */)
+-	t.Logf("%q", formattedStr)
+-	if !strings.Contains(formattedStr, "\"key_1\": {\"type\": \"VARCHAR\", \"value\": \"val_1\"}") {
+-		t.Fatalf("bind variable 'key_1' is not formatted")
+-	}
++// 	formattedStr = FormatBindVariables(bindVariables, true /* full */, true /* asJSON */)
++// 	t.Logf("%q", formattedStr)
++// 	if !strings.Contains(formattedStr, "\"key_1\": {\"type\": \"VARCHAR\", \"value\": \"val_1\"}") {
++// 		t.Fatalf("bind variable 'key_1' is not formatted")
++// 	}
+ 
+-	if !strings.Contains(formattedStr, "\"key_2\": {\"type\": \"INT64\", \"value\": 789}") {
+-		t.Fatalf("bind variable 'key_2' is not formatted")
+-	}
++// 	if !strings.Contains(formattedStr, "\"key_2\": {\"type\": \"INT64\", \"value\": 789}") {
++// 		t.Fatalf("bind variable 'key_2' is not formatted")
++// 	}
+ 
+-	if !strings.Contains(formattedStr, "\"key_3\": {\"type\": \"VARBINARY\", \"value\": \"val_3\"}") {
+-		t.Fatalf("bind variable 'key_3' is not formatted")
+-	}
++// 	if !strings.Contains(formattedStr, "\"key_3\": {\"type\": \"VARBINARY\", \"value\": \"val_3\"}") {
++// 		t.Fatalf("bind variable 'key_3' is not formatted")
++// 	}
+ 
+-	if !strings.Contains(formattedStr, "\"key_4\": {\"type\": \"TUPLE\", \"value\": \"\"}") {
+-		t.Fatalf("bind variable 'key_4' is not formatted")
+-	}
++// 	if !strings.Contains(formattedStr, "\"key_4\": {\"type\": \"TUPLE\", \"value\": \"\"}") {
++// 		t.Fatalf("bind variable 'key_4' is not formatted")
++// 	}
+ 
+-	formattedStr = FormatBindVariables(bindVariables, false /* full */, true /* asJSON */)
+-	if !strings.Contains(formattedStr, "\"key_1\": {\"type\": \"VARCHAR\", \"value\": \"5 bytes\"}") {
+-		t.Fatalf("bind variable 'key_1' is not formatted")
+-	}
++// 	formattedStr = FormatBindVariables(bindVariables, false /* full */, true /* asJSON */)
++// 	if !strings.Contains(formattedStr, "\"key_1\": {\"type\": \"VARCHAR\", \"value\": \"5 bytes\"}") {
++// 		t.Fatalf("bind variable 'key_1' is not formatted")
++// 	}
+ 
+-	if !strings.Contains(formattedStr, "\"key_2\": {\"type\": \"INT64\", \"value\": 789}") {
+-		t.Fatalf("bind variable 'key_2' is not formatted")
+-	}
++// 	if !strings.Contains(formattedStr, "\"key_2\": {\"type\": \"INT64\", \"value\": 789}") {
++// 		t.Fatalf("bind variable 'key_2' is not formatted")
++// 	}
+ 
+-	if !strings.Contains(formattedStr, "\"key_3\": {\"type\": \"VARCHAR\", \"value\": \"5 bytes\"}") {
+-		t.Fatalf("bind variable 'key_3' is not formatted")
+-	}
++// 	if !strings.Contains(formattedStr, "\"key_3\": {\"type\": \"VARCHAR\", \"value\": \"5 bytes\"}") {
++// 		t.Fatalf("bind variable 'key_3' is not formatted")
++// 	}
+ 
+-	if !strings.Contains(formattedStr, "\"key_4\": {\"type\": \"VARCHAR\", \"value\": \"2 items\"}") {
+-		t.Fatalf("bind variable 'key_4' is not formatted")
+-	}
+-}
++// 	if !strings.Contains(formattedStr, "\"key_4\": {\"type\": \"VARCHAR\", \"value\": \"2 items\"}") {
++// 		t.Fatalf("bind variable 'key_4' is not formatted")
++// 	}
++// }
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: event_token.go
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: event_token_test.go
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/plan_value.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/plan_value.go
 @@ -18,10 +18,10 @@
  
  import (
@@ -83,7 +225,7 @@ diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/plan_value.go /Users/b
 -	querypb "vitess.io/vitess/go/vt/proto/query"
 -	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
 -	"vitess.io/vitess/go/vt/vterrors"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	querypb "github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  // PlanValue represents a value or a list of values for
@@ -138,36 +280,25 @@ diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/plan_value.go /Users/b
  		}
  	}
  
-@@ -221,7 +221,7 @@
- 		rows[i] = make([]Value, len(pvs))
- 	}
- 
--	// Using j because we're resolving by columns.
-+	// Using j becasue we're resolving by columns.
- 	for j, pv := range pvs {
- 		switch {
- 		case pv.Key != "":
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/plan_value_test.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/plan_value_test.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/plan_value_test.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/plan_value_test.go	2018-06-04 08:05:24.000000000 -0700
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/plan_value_test.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/plan_value_test.go
 @@ -21,7 +21,7 @@
  	"strings"
  	"testing"
  
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  func TestPlanValueIsNull(t *testing.T) {
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: proto3.go
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: proto3_test.go
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: query_response.go
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: result.go
-Only in /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/: result_test.go
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/testing.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/testing.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/testing.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/testing.go	2018-06-04 08:06:27.000000000 -0700
-@@ -17,17 +17,14 @@
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: proto3.go
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: proto3_test.go
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: query_response.go
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: result.go
+Only in /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/: result_test.go
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/testing.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/testing.go
+@@ -17,99 +17,95 @@
  package sqltypes
  
  import (
@@ -176,115 +307,272 @@ diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/testing.go /Users/bram
 -	"strings"
 -
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	querypb "github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
- // Functions in this file should only be used for testing.
- // This is an experiment to see if test code bloat can be
- // reduced and readability improved.
+-// Functions in this file should only be used for testing.
+-// This is an experiment to see if test code bloat can be
+-// reduced and readability improved.
++// // Functions in this file should only be used for testing.
++// // This is an experiment to see if test code bloat can be
++// // reduced and readability improved.
  
-+/*
- // MakeTestFields builds a []*querypb.Field for testing.
- //   fields := sqltypes.MakeTestFields(
- //     "a|b",
-@@ -110,6 +107,7 @@
- 	}
- 	return results
- }
-+*/
+-// MakeTestFields builds a []*querypb.Field for testing.
+-//   fields := sqltypes.MakeTestFields(
+-//     "a|b",
+-//     "int64|varchar",
+-//   )
+-// The field types are as defined in querypb and are case
+-// insensitive. Column delimiters must be used only to sepearate
+-// strings and not at the beginning or the end.
+-func MakeTestFields(names, types string) []*querypb.Field {
+-	n := split(names)
+-	t := split(types)
+-	var fields []*querypb.Field
+-	for i := range n {
+-		fields = append(fields, &querypb.Field{
+-			Name: n[i],
+-			Type: querypb.Type(querypb.Type_value[strings.ToUpper(t[i])]),
+-		})
+-	}
+-	return fields
+-}
++// // MakeTestFields builds a []*querypb.Field for testing.
++// //   fields := sqltypes.MakeTestFields(
++// //     "a|b",
++// //     "int64|varchar",
++// //   )
++// // The field types are as defined in querypb and are case
++// // insensitive. Column delimiters must be used only to sepearate
++// // strings and not at the beginning or the end.
++// func MakeTestFields(names, types string) []*querypb.Field {
++// 	n := split(names)
++// 	t := split(types)
++// 	var fields []*querypb.Field
++// 	for i := range n {
++// 		fields = append(fields, &querypb.Field{
++// 			Name: n[i],
++// 			Type: querypb.Type(querypb.Type_value[strings.ToUpper(t[i])]),
++// 		})
++// 	}
++// 	return fields
++// }
+ 
+-// MakeTestResult builds a *sqltypes.Result object for testing.
+-//   result := sqltypes.MakeTestResult(
+-//     fields,
+-//     " 1|a",
+-//     "10|abcd",
+-//   )
+-// The field type values are set as the types for the rows built.
+-// Spaces are trimmed from row values. "null" is treated as NULL.
+-func MakeTestResult(fields []*querypb.Field, rows ...string) *Result {
+-	result := &Result{
+-		Fields: fields,
+-	}
+-	if len(rows) > 0 {
+-		result.Rows = make([][]Value, len(rows))
+-	}
+-	for i, row := range rows {
+-		result.Rows[i] = make([]Value, len(fields))
+-		for j, col := range split(row) {
+-			if col == "null" {
+-				continue
+-			}
+-			result.Rows[i][j] = MakeTrusted(fields[j].Type, []byte(col))
+-		}
+-	}
+-	result.RowsAffected = uint64(len(result.Rows))
+-	return result
+-}
++// // MakeTestResult builds a *sqltypes.Result object for testing.
++// //   result := sqltypes.MakeTestResult(
++// //     fields,
++// //     " 1|a",
++// //     "10|abcd",
++// //   )
++// // The field type values are set as the types for the rows built.
++// // Spaces are trimmed from row values. "null" is treated as NULL.
++// func MakeTestResult(fields []*querypb.Field, rows ...string) *Result {
++// 	result := &Result{
++// 		Fields: fields,
++// 	}
++// 	if len(rows) > 0 {
++// 		result.Rows = make([][]Value, len(rows))
++// 	}
++// 	for i, row := range rows {
++// 		result.Rows[i] = make([]Value, len(fields))
++// 		for j, col := range split(row) {
++// 			if col == "null" {
++// 				continue
++// 			}
++// 			result.Rows[i][j] = MakeTrusted(fields[j].Type, []byte(col))
++// 		}
++// 	}
++// 	result.RowsAffected = uint64(len(result.Rows))
++// 	return result
++// }
+ 
+-// MakeTestStreamingResults builds a list of results for streaming.
+-//   results := sqltypes.MakeStreamingResults(
+-//     fields,
+-//		 "1|a",
+-//     "2|b",
+-//     "---",
+-//     "c|c",
+-//   )
+-// The first result contains only the fields. Subsequent results
+-// are built using the field types. Every input that starts with a "-"
+-// is treated as streaming delimiter for one result. A final
+-// delimiter must not be supplied.
+-func MakeTestStreamingResults(fields []*querypb.Field, rows ...string) []*Result {
+-	var results []*Result
+-	results = append(results, &Result{Fields: fields})
+-	start := 0
+-	cur := 0
+-	// Add a final streaming delimiter to simplify the loop below.
+-	rows = append(rows, "-")
+-	for cur < len(rows) {
+-		if rows[cur][0] != '-' {
+-			cur++
+-			continue
+-		}
+-		result := MakeTestResult(fields, rows[start:cur]...)
+-		result.Fields = nil
+-		result.RowsAffected = 0
+-		results = append(results, result)
+-		start = cur + 1
+-		cur = start
+-	}
+-	return results
+-}
++// // MakeTestStreamingResults builds a list of results for streaming.
++// //   results := sqltypes.MakeStreamingResults(
++// //     fields,
++// //		 "1|a",
++// //     "2|b",
++// //     "---",
++// //     "c|c",
++// //   )
++// // The first result contains only the fields. Subsequent results
++// // are built using the field types. Every input that starts with a "-"
++// // is treated as streaming delimiter for one result. A final
++// // delimiter must not be supplied.
++// func MakeTestStreamingResults(fields []*querypb.Field, rows ...string) []*Result {
++// 	var results []*Result
++// 	results = append(results, &Result{Fields: fields})
++// 	start := 0
++// 	cur := 0
++// 	// Add a final streaming delimiter to simplify the loop below.
++// 	rows = append(rows, "-")
++// 	for cur < len(rows) {
++// 		if rows[cur][0] != '-' {
++// 			cur++
++// 			continue
++// 		}
++// 		result := MakeTestResult(fields, rows[start:cur]...)
++// 		result.Fields = nil
++// 		result.RowsAffected = 0
++// 		results = append(results, result)
++// 		start = cur + 1
++// 		cur = start
++// 	}
++// 	return results
++// }
  
  // TestBindVariable makes a *querypb.BindVariable from
  // an interface{}.It panics on invalid input.
-@@ -131,6 +129,7 @@
+@@ -131,24 +127,24 @@
  	return MakeTrusted(typ, []byte(val))
  }
  
-+/*
- // PrintResults prints []*Results into a string.
- // This function should only be used for testing.
- func PrintResults(results []*Result) string {
-@@ -152,3 +151,4 @@
- 	}
- 	return splits
- }
-+*/
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/type.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/type.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/type.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/type.go	2018-06-04 08:05:24.000000000 -0700
+-// PrintResults prints []*Results into a string.
+-// This function should only be used for testing.
+-func PrintResults(results []*Result) string {
+-	b := new(bytes.Buffer)
+-	for i, r := range results {
+-		if i == 0 {
+-			fmt.Fprintf(b, "%v", r)
+-			continue
+-		}
+-		fmt.Fprintf(b, ", %v", r)
+-	}
+-	return b.String()
+-}
++// // PrintResults prints []*Results into a string.
++// // This function should only be used for testing.
++// func PrintResults(results []*Result) string {
++// 	b := new(bytes.Buffer)
++// 	for i, r := range results {
++// 		if i == 0 {
++// 			fmt.Fprintf(b, "%v", r)
++// 			continue
++// 		}
++// 		fmt.Fprintf(b, ", %v", r)
++// 	}
++// 	return b.String()
++// }
+ 
+-func split(str string) []string {
+-	splits := strings.Split(str, "|")
+-	for i, v := range splits {
+-		splits[i] = strings.TrimSpace(v)
+-	}
+-	return splits
+-}
++// func split(str string) []string {
++// 	splits := strings.Split(str, "|")
++// 	for i, v := range splits {
++// 		splits[i] = strings.TrimSpace(v)
++// 	}
++// 	return splits
++// }
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/type.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/type.go
 @@ -19,7 +19,7 @@
  import (
  	"fmt"
  
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  // This file provides wrappers and support
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/type_test.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/type_test.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/type_test.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/type_test.go	2018-06-04 08:05:24.000000000 -0700
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/type_test.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/type_test.go
 @@ -19,7 +19,7 @@
  import (
  	"testing"
  
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  func TestTypeValues(t *testing.T) {
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/value.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/value.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/value.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/value.go	2018-06-04 08:05:24.000000000 -0700
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/value.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/value.go
 @@ -23,10 +23,10 @@
  	"fmt"
  	"strconv"
  
 -	"vitess.io/vitess/go/bytes2"
 -	"vitess.io/vitess/go/hack"
-+	"github.com/xwb1989/sqlparser/dependency/bytes2"
-+	"github.com/xwb1989/sqlparser/dependency/hack"
++	"github.com/sandeepone/sqlparser/dependency/bytes2"
++	"github.com/sandeepone/sqlparser/dependency/hack"
  
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  var (
-@@ -48,7 +48,7 @@
- }
- 
- // Value can store any SQL value. If the value represents
--// an integral type, the bytes are always stored as a canonical
-+// an integral type, the bytes are always stored as a cannonical
- // representation that matches how MySQL returns such values.
- type Value struct {
- 	typ querypb.Type
-@@ -126,7 +126,7 @@
- 	return MakeTrusted(VarBinary, []byte(v))
- }
- 
--// NewIntegral builds an integral type from a string representation.
-+// NewIntegral builds an integral type from a string representaion.
- // The type will be Int64 or Uint64. Int64 will be preferred where possible.
- func NewIntegral(val string) (n Value, err error) {
- 	signed, err := strconv.ParseInt(val, 0, 64)
-@@ -169,7 +169,7 @@
- 	return v.typ
- }
- 
--// Raw returns the internal representation of the value. For newer types,
-+// Raw returns the internal represenation of the value. For newer types,
- // this may not match MySQL's representation.
- func (v Value) Raw() []byte {
- 	return v.val
-diff -u /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/value_test.go /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/value_test.go
---- /Users/bramp/go/src/vitess.io/vitess/go//sqltypes/value_test.go	2018-06-05 08:45:47.000000000 -0700
-+++ /Users/bramp/go/src/github.com/xwb1989/sqlparser//dependency/sqltypes/value_test.go	2018-06-04 08:05:24.000000000 -0700
+--- /home/gleez/workspace/src/vitess.io/vitess/go//sqltypes/value_test.go
++++ /home/gleez/workspace/app/manticore/sqlparser//dependency/sqltypes/value_test.go
 @@ -22,7 +22,7 @@
  	"strings"
  	"testing"
  
 -	querypb "vitess.io/vitess/go/vt/proto/query"
-+	"github.com/xwb1989/sqlparser/dependency/querypb"
++	"github.com/sandeepone/sqlparser/dependency/querypb"
  )
  
  const (

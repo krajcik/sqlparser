@@ -18,6 +18,8 @@ package sqltypes
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 
 	querypb "github.com/sandeepone/sqlparser/dependency/querypb"
 )

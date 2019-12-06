@@ -20,9 +20,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
-
-	"github.com/golang/protobuf/proto"
 
 	"github.com/sandeepone/sqlparser/dependency/querypb"
 )

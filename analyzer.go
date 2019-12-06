@@ -19,6 +19,7 @@ package sqlparser
 // analyzer.go contains utility analysis functions.
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"

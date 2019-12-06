@@ -17,11 +17,11 @@ limitations under the License.
 package sqlparser
 
 import (
-	"bufio"
+	// "bufio"
 	"bytes"
 	"fmt"
 	"math/rand"
-	"os"
+	// "os"
 	"strings"
 	"sync"
 	"testing"
@@ -2544,24 +2544,24 @@ func TestSkipToEnd(t *testing.T) {
 	}
 }
 
-func TestParseDjangoQueries(t *testing.T) {
+// func TestParseDjangoQueries(t *testing.T) {
 
-	file, err := os.Open("./test_queries/django_queries.txt")
-	defer file.Close()
-	if err != nil {
-		t.Errorf(" Error: %v", err)
-	}
-	scanner := bufio.NewScanner(file)
+// 	file, err := os.Open("./test_queries/django_queries.txt")
+// 	defer file.Close()
+// 	if err != nil {
+// 		t.Errorf(" Error: %v", err)
+// 	}
+// 	scanner := bufio.NewScanner(file)
 
-	for scanner.Scan() {
+// 	for scanner.Scan() {
 
-		_, err := Parse(string(scanner.Text()))
-		if err != nil {
-			t.Error(scanner.Text())
-			t.Errorf(" Error: %v", err)
-		}
-	}
-}
+// 		_, err := Parse(string(scanner.Text()))
+// 		if err != nil {
+// 			t.Error(scanner.Text())
+// 			t.Errorf(" Error: %v", err)
+// 		}
+// 	}
+// }
 
 // Benchmark run on 6/23/17, prior to improvements:
 // BenchmarkParse1-4         100000             16334 ns/op
