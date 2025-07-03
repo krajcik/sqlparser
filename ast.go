@@ -26,8 +26,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sandeepone/sqlparser/dependency/querypb"
-	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+	"github.com/krajcik/sqlparser/dependency/querypb"
+	"github.com/krajcik/sqlparser/dependency/sqltypes"
 )
 
 // parserPool is a pool for parser objects.
@@ -3066,12 +3066,13 @@ type GroupConcatExpr struct {
 	Distinct  string
 	Exprs     SelectExprs
 	OrderBy   OrderBy
+	Limit     *Limit
 	Separator string
 }
 
 // Format formats the node
 func (node *GroupConcatExpr) Format(buf *TrackedBuffer) {
-	buf.Myprintf("group_concat(%s%v%v%s)", node.Distinct, node.Exprs, node.OrderBy, node.Separator)
+	buf.Myprintf("group_concat(%s%v%v%v%s)", node.Distinct, node.Exprs, node.OrderBy, node.Limit, node.Separator)
 }
 
 func (node *GroupConcatExpr) walkSubtree(visit Visit) error {
@@ -3082,6 +3083,7 @@ func (node *GroupConcatExpr) walkSubtree(visit Visit) error {
 		visit,
 		node.Exprs,
 		node.OrderBy,
+		node.Limit,
 	)
 }
 

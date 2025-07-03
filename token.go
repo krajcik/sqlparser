@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sandeepone/sqlparser/dependency/bytes2"
-	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+	"github.com/krajcik/sqlparser/dependency/bytes2"
+	"github.com/krajcik/sqlparser/dependency/sqltypes"
 )
 
 const (

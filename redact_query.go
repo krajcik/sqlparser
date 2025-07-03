@@ -16,7 +16,7 @@ limitations under the License.
 
 package sqlparser
 
-import "github.com/sandeepone/sqlparser/dependency/querypb"
+import "github.com/krajcik/sqlparser/dependency/querypb"
 
 // RedactSQLQuery returns a sql string with the params stripped out for display
 func RedactSQLQuery(sql string) (string, error) {

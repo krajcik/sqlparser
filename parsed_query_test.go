@@ -20,9 +20,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+	"github.com/krajcik/sqlparser/dependency/sqltypes"
 
-	"github.com/sandeepone/sqlparser/dependency/querypb"
+	"github.com/krajcik/sqlparser/dependency/querypb"
 )
 
 func TestNewParsedQuery(t *testing.T) {

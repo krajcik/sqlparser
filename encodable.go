@@ -19,7 +19,7 @@ package sqlparser
 import (
 	"strings"
 
-	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+	"github.com/krajcik/sqlparser/dependency/sqltypes"
 )
 
 // This file contains types that are 'Encodable'.

@@ -1,4 +1,4 @@
-module github.com/sandeepone/sqlparser
+module github.com/krajcik/sqlparser
 
 go 1.13
 

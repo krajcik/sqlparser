@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+	"github.com/krajcik/sqlparser/dependency/sqltypes"
 )
 
 func TestEncodable(t *testing.T) {

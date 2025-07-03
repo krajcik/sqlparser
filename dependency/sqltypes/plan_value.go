@@ -21,7 +21,7 @@ import (
 	"errors"
 	"fmt"
 
-	querypb "github.com/sandeepone/sqlparser/dependency/querypb"
+	querypb "github.com/krajcik/sqlparser/dependency/querypb"
 )
 
 // PlanValue represents a value or a list of values for

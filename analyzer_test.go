@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+	"github.com/krajcik/sqlparser/dependency/sqltypes"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -25,7 +25,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/sandeepone/sqlparser/dependency/sqltypes"
+	"github.com/krajcik/sqlparser/dependency/sqltypes"
 )
 
 // StatementType encodes the type of a SQL statement
